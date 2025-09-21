@@ -1,0 +1,14 @@
+[theme]
+base = "dark"
+primaryColor = "#85cb33"
+backgroundColor = "#100b00"
+secondaryBackgroundColor = "#3b341f"
+textColor = "#efffc8"
+linkColor = "#a5cbc3"
+baseRadius = "full"
+headingFont = "orbitron"
+
+[[theme.fontFaces]]
+family = "orbitron"
+url = "@import url(\"https://fonts.googleapis.com/css2?family=Orbitron&display=swap\");"
+style = "bold"
