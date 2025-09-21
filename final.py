@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
+from statsmodels.tsa.arima.model import ARIMA
 
 #prep data
 #employment and realValAdd
@@ -51,6 +52,7 @@ gov['Real Value Added by Industry (millions)'].iloc[0] = 22512
 gov['Real Value Added by Industry (millions)'] = gov['Real Value Added by Industry (millions)'].astype(float)
 
 branches_df = pd.read_csv('branches_df.csv')
+govBranch = pd.read_csv('govBranch.csv')
 
 
 #title and intro 
@@ -199,9 +201,11 @@ st.divider()
 
 st.header('Monte Carlo Simulation')
 
+st.subheader('Private Gross Output')
+
 fig2 = go.Figure()
 
-num = st.slider("Pick a number of samples. Larger samples slow down the site.", 10, 9999, 100)
+num = st.slider("Pick a number of samples. Larger samples slow down the site.", 10, 9999, 100, key = 'priv' )
 
 # Get unique simulation IDs and sample them
 sim_ids = branches_df['Simulation'].unique()
@@ -227,7 +231,7 @@ fig2.add_trace(go.Scatter(
 ))
 
 fig2.update_layout(
-    title="Monte Carlo Simulations",
+    title="Monte Carlo Simulations for Private Gross Output ",
     xaxis_title="Year",
     yaxis_title="Gross Output",
     template="plotly_white"
@@ -257,6 +261,168 @@ col3,col4 = st.columns(2)
 with col3:
     st.plotly_chart(fig3, theme='streamlit')
 with col4:
-    st.write('The model predicts an increase in growth rate of the space industry till 2024, and then a bit of decrease.' \
-    'This may indicate that the industry would have reached its peak and then will stabilize. However, there are other models ' \
-    'we can use to determine whether that is true or not')
+    st.write(
+    'The model predicts an increase in growth rate of the space industry till 2024, and then a bit of decrease. '
+    'This may indicate that the industry would have reached its peak and then will stabilize. However, there are other '
+    'approaches we can take to understand how the space industry will grow'
+    )
+
+st.subheader('Government Gross Output')
+
+
+fig4 = go.Figure()
+
+numb = st.slider("Pick a number of samples. Larger samples slow down the site.", 10, 9999, 100, key = 'gov')
+
+# Get unique simulation IDs and sample them
+sims = govBranch['Simulation'].unique()
+sampled = np.random.choice(sim_ids, size=min(num, len(sims)), replace=False)
+
+for sim in sampled:
+    group = govBranch[govBranch['Simulation'] == sim]
+    fig4.add_trace(go.Scatter(
+        x=group["Year"],
+        y=group["Gross_Output"],
+        mode='lines',
+        line=dict(color='rgba(165,203,195,0.1)', width=1),
+        showlegend=False
+    ))
+
+mean_by_year = govBranch.groupby("Year")["Gross_Output"].mean()
+fig4.add_trace(go.Scatter(
+    x=mean_by_year.index,
+    y=mean_by_year.values,
+    mode='lines',
+    line=dict(color='#85cb33', width=2.5),
+    name="Mean across simulations"
+))
+
+fig4.update_layout(
+    title="Monte Carlo Simulations for Private Gross Output ",
+    xaxis_title="Year",
+    yaxis_title="Gross Output",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig4, theme='streamlit')
+
+st.write('Yet again, we see that the line tapers off to a equillibrium')
+
+fig5 = go.Figure()
+fig5.add_trace(go.Scatter(
+    x=mean_by_year.index,
+    y=mean_by_year.values,
+    mode='lines',
+    line=dict(color='#85cb33', width=2.5),
+    name="Mean across simulations"
+))
+
+fig5.update_layout(
+    title="Monte Carlo Simulations for Government Gross Output",
+    xaxis_title="Year",
+    yaxis_title="Gross Output",
+    template="plotly_white"
+)
+
+col5,col6 = st.columns(2)
+with col5:
+    st.plotly_chart(fig5, theme='streamlit')
+with col6:
+    st.write(
+    'The model predicts an increase in the growth rate of the government space industry. Unlike ' \
+    'the private space indsutry, which tends to stop growing after 2025, the government space industry is ' \
+    'projected to continue growing even after that, which may be due to the settlement of the Space Force.'
+    )
+
+st.divider()
+
+st.header('ARIMA Model')
+
+st.subheader('Government Gross Output')
+
+st.write('We can use an ARIMA model to see what it projects is the growth of the ')
+
+model = ARIMA(gov['Real Gross Output by Industry (millions)'], order=(1,1,1))
+model_fit = model.fit()
+forecast = model_fit.forecast(steps=3)
+
+
+years_hist = gov['Year']
+output_hist = gov['Real Gross Output by Industry (millions)']
+
+n_forecast = 3
+years_forecast = np.arange(years_hist.iloc[-1] + 1, years_hist.iloc[-1] + 1 + n_forecast)
+output_forecast = forecast.values
+
+
+
+fig7 = go.Figure()
+
+fig7.add_trace(go.Scatter(
+    x=years_hist,
+    y=output_hist,
+    mode='lines+markers',
+    name='Historical',
+    line=dict(color='#a5cbc3')
+))
+
+fig7.add_trace(go.Scatter(
+    x=years_forecast,
+    y=output_forecast,
+    mode='lines+markers',
+    name='Forecast',
+    line=dict(color='#85cb33')
+))
+
+fig7.update_layout(
+    title="ARIMA Forecast for Government Gross Output",
+    xaxis_title="Year",
+    yaxis_title="Gross Output (millions)",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig7, theme='streamlit')
+
+st.write('We see that this model, likely due to the limited data, ' \
+'projects limited growth in the next few years for gross output. We can do the same for public gross output.')
+
+st.subheader('Private Gross Output')
+
+model2 = ARIMA(gov['Real Gross Output by Industry (millions)'], order=(1,1,1))
+model_fit2 = model2.fit()
+forecast2 = model_fit2.forecast(steps=3)
+
+
+years_hist2 = private['Year']
+output_hist2 = private['Real Gross Output by Industry (millions)']
+
+n_forecast = 3
+years_forecast2 = np.arange(years_hist2.iloc[-1] + 1, years_hist2.iloc[-1] + 1 + n_forecast)
+output_forecast2 = forecast2.values
+
+fig8 = go.Figure()
+
+fig8.add_trace(go.Scatter(
+    x=years_hist2,
+    y=output_hist2,
+    mode='lines+markers',
+    name='Historical',
+    line=dict(color='#a5cbc3')
+))
+
+fig8.add_trace(go.Scatter(
+    x=years_forecast2,
+    y=output_forecast2,
+    mode='lines+markers',
+    name='Forecast',
+    line=dict(color='#85cb33')
+))
+
+fig8.update_layout(
+    title="ARIMA Forecast for Private Gross Output",
+    xaxis_title="Year",
+    yaxis_title="Gross Output (millions)",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig8, theme='streamlit')
