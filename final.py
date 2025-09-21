@@ -54,13 +54,13 @@ branches_df = pd.read_csv('branches_df.csv')
 
 
 #title and intro 
-st.title('Liftoff in the Private Space Industry')
+st.title('Liftoff in the Space Industry')
 st.subheader('2025 CDC Project by Perry, Sarthak, and Amishi')
-st.write('Business Track')
+st.write('An investigation into potential growth and investment opportunities in the private space industry.    ')
 
 st.divider()
 
-st.header('The Question')
+st.header('Our Question')
 st.write('As an investor, you may have noticed that space has become a big industry, and may be looking' 
           'to invest in it. In recent times, space stocks have grown rapidly. We can see the gross output ' \
           'of the space industry below. ')
@@ -71,8 +71,25 @@ total['Year'] = private['Year']
 fig = px.line(total, x="Year", y="Gross Output", title='Gross Output of the Space Economy in Millions')
 st.plotly_chart(fig, theme = 'streamlit')
 
-st.write('Clearly it has grown a lot since in the last couple of years. We can see its break up outside of' \
-' NASA and other government agencies as well. ')
+st.write('Clearly it has grown quite a bit. In our search to explain this, we came accross a dataset that showed the number'
+' of objects launched into space annually, which can be shown below.  ')
+
+fig1 = px.line(private, x="Year", y="Annual number of objects launched into outer space", 
+              title='Annual Number of Objects Launched into Outer Space')
+fig1.add_vline(
+    x=2019,
+    line_width=2,
+    line_dash="dash",
+    line_color="#85cb33",
+    annotation_text="2019",
+    annotation_position="top"
+)
+st.plotly_chart(fig1, theme = 'streamlit')
+
+st.write("We saw the number of objects launched 'lifted off' at about 2019, growing, seemingly exponentially. Naturally, " \
+"with the growth of private space companies, we wanted to see whether it had to do with private players or the government. " \
+"Below are the graphs of the gross output of the private and government space industries, with a fill area showing the" \
+" number of objects launched in an given year. ")
 
 graph1 = pd.DataFrame()
 graph1['Year'] = private['Year']
@@ -162,26 +179,41 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.plotly_chart(fig_gov, theme='streamlit', use_container_width=True)
-    st.write('The area fill around the lines show the number of objects launched into space that year. As can be seen, the' \
+    st.write(' As can be seen, the' \
     ' government gross output is very strongly correlated with the number of objects launched into space, especially after 2019, ' \
     'with a correlation value of 09436.')
 with col2:
     st.plotly_chart(fig_priv, theme='streamlit', use_container_width=True)
-    st.write('The private gross output are weakly correlated with a value of -0.2639. This goes against what we ')
+    st.write('The private gross output are weakly correlated with a value of -0.2639. This goes against what we initially thought,' \
+    'especially since, looking at news in that era, we saw a few big headlines regarding space.')
 
+st.write('With this information, we turned to the news for more information on what could be causing that sudden increase in ' \
+'number of objects launched. We found two big things: the beginning of launches for the Starlink, as well as the creation of the' \
+' United States Space Force, which could have caused a surge in launches. However, with a lack of data it is hard to say for sure.')
 
+st.write('As an investor, you want to know the future of the industry - how it will grow how big. The last released estimate ' \
+' on the size of the space industry was in 2023, and it was estimated to be $202 billion. We bring you, many models used to estimate' \
+' the size of the space industry.')
+
+st.divider()
+
+st.header('Monte Carlo Simulation')
 
 fig2 = go.Figure()
 
-num = st.slider("Pick a number of samples. Larger samples slow down the site.", 0, 9999)
-sample = branches_df.groupby("Simulation").sample(num)
+num = st.slider("Pick a number of samples. Larger samples slow down the site.", 10, 9999, 100)
 
-for sim, group in sample:
+# Get unique simulation IDs and sample them
+sim_ids = branches_df['Simulation'].unique()
+sampled_ids = np.random.choice(sim_ids, size=min(num, len(sim_ids)), replace=False)
+
+for sim in sampled_ids:
+    group = branches_df[branches_df['Simulation'] == sim]
     fig2.add_trace(go.Scatter(
         x=group["Year"],
         y=group["Gross_Output"],
         mode='lines',
-        line=dict(color='rgba(165,203,195,0.02)', width=1),
+        line=dict(color='rgba(165,203,195,0.1)', width=1),
         showlegend=False
     ))
 
@@ -203,3 +235,28 @@ fig2.update_layout(
 
 st.plotly_chart(fig2, theme='streamlit')
 
+st.write('We can see that the average tends to taper off to one point. If we just look at that average line:')
+
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(
+    x=mean_by_year.index,
+    y=mean_by_year.values,
+    mode='lines',
+    line=dict(color='#85cb33', width=2.5),
+    name="Mean across simulations"
+))
+
+fig3.update_layout(
+    title="Monte Carlo Simulations",
+    xaxis_title="Year",
+    yaxis_title="Gross Output",
+    template="plotly_white"
+)
+
+col3,col4 = st.columns(2)
+with col3:
+    st.plotly_chart(fig3, theme='streamlit')
+with col4:
+    st.write('The model predicts an increase in growth rate of the space industry till 2024, and then a bit of decrease.' \
+    'This may indicate that the industry would have reached its peak and then will stabilize. However, there are other models ' \
+    'we can use to determine whether that is true or not')
