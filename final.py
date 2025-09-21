@@ -50,6 +50,7 @@ gov.rename(columns = {'Real Value Added by Industry': 'Real Value Added by Indus
 gov['Real Value Added by Industry (millions)'].iloc[0] = 22512
 gov['Real Value Added by Industry (millions)'] = gov['Real Value Added by Industry (millions)'].astype(float)
 
+branches_df = pd.read_csv('branches_df.csv')
 
 
 #title and intro 
@@ -73,33 +74,132 @@ st.plotly_chart(fig, theme = 'streamlit')
 st.write('Clearly it has grown a lot since in the last couple of years. We can see its break up outside of' \
 ' NASA and other government agencies as well. ')
 
+graph1 = pd.DataFrame()
+graph1['Year'] = private['Year']
+graph1['priv'] = private['Real Gross Output by Industry (millions)']
+graph1['gov'] = gov['Real Gross Output by Industry (millions)']
+graph1['privL'] = graph1['priv'] - private['Annual number of objects launched into outer space']
+graph1['privU']= graph1['priv'] + private['Annual number of objects launched into outer space']
+graph1['govL'] = graph1['gov'] - private['Annual number of objects launched into outer space']
+graph1['govU']= graph1['gov'] + private['Annual number of objects launched into outer space']
+yearRev = graph1['Year'][::-1]
 
+x = list(graph1['Year'])
+x_rev = x[::-1]
+y_upper = list(graph1['govU'])
+y_lower = list(graph1['govL'])[::-1]
+y_upper1 = list(graph1['privU'])
+y_lower1 = list(graph1['privL'])[::-1]
 
-'''
-# Prepare data
-x_vals = df_finished_rvbi.drop(columns=[df_finished_rvbi.columns[0]]).columns
-heights = df_finished_rvbi.drop(columns=[df_finished_rvbi.columns[0]]).iloc[1]
+fig1 = go.Figure()
 
+# --- Government Plot ---
+fig_gov = go.Figure()
 
+fig_gov.add_trace(go.Scatter(
+    x=x + x_rev,
+    y=y_upper + y_lower,
+    fill='toself',
+    fillcolor='rgba(133,203,51,0.2)',
+    line_color='rgba(255,255,255,0)',
+    showlegend=False,
+    name='Government Range',
+))
+fig_gov.add_trace(go.Scatter(
+    x=graph1['Year'],
+    y=graph1['gov'],
+    line_color='#85cb33',
+    name='Government Gross Output',
+    showlegend=True,
+))
 
-
-# Create Plotly bar plot
-fig = go.Figure(data=[
-    go.Bar(
-        x=x_vals,
-        y=heights,
-        marker_color='skyblue',
-        marker_line_color='black'
-        # width parameter removed
-    )
-])
-
-fig.update_layout(
-    title="Bar Plot with Plotly",
+fig_gov.update_layout(
+    title="Government Gross Output Range",
     xaxis_title="Year",
-    yaxis_title="Value",
-    bargap=0.2
+    yaxis_title="Gross Output (millions)",
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    )
 )
 
-st.plotly_chart(fig)
-'''
+# --- Private Plot ---
+fig_priv = go.Figure()
+
+fig_priv.add_trace(go.Scatter(
+    x=x + x_rev,
+    y=y_upper1 + y_lower1,
+    fill='toself',
+    fillcolor='rgba(165,203,195,0.2)',
+    line_color='rgba(255,255,255,0)',
+    showlegend=False,
+    name='Private Range',
+))
+fig_priv.add_trace(go.Scatter(
+    x=graph1['Year'],
+    y=graph1['priv'],
+    line_color='#a5cbc3',
+    name='Private Gross Output',
+    showlegend=True,
+))
+
+fig_priv.update_layout(
+    title="Private Gross Output Range",
+    xaxis_title="Year",
+    yaxis_title="Gross Output (millions)",
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    )
+)
+col1, col2 = st.columns(2)
+
+with col1:
+    st.plotly_chart(fig_gov, theme='streamlit', use_container_width=True)
+    st.write('The area fill around the lines show the number of objects launched into space that year. As can be seen, the' \
+    ' government gross output is very strongly correlated with the number of objects launched into space, especially after 2019, ' \
+    'with a correlation value of 09436.')
+with col2:
+    st.plotly_chart(fig_priv, theme='streamlit', use_container_width=True)
+    st.write('The private gross output are weakly correlated with a value of -0.2639. This goes against what we ')
+
+
+
+fig2 = go.Figure()
+
+num = st.slider("Pick a number of samples. Larger samples slow down the site.", 0, 9999)
+sample = branches_df.groupby("Simulation").sample(num)
+
+for sim, group in sample:
+    fig2.add_trace(go.Scatter(
+        x=group["Year"],
+        y=group["Gross_Output"],
+        mode='lines',
+        line=dict(color='rgba(165,203,195,0.02)', width=1),
+        showlegend=False
+    ))
+
+mean_by_year = branches_df.groupby("Year")["Gross_Output"].mean()
+fig2.add_trace(go.Scatter(
+    x=mean_by_year.index,
+    y=mean_by_year.values,
+    mode='lines',
+    line=dict(color='#85cb33', width=2.5),
+    name="Mean across simulations"
+))
+
+fig2.update_layout(
+    title="Monte Carlo Simulations",
+    xaxis_title="Year",
+    yaxis_title="Gross Output",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig2, theme='streamlit')
+
